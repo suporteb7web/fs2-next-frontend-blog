@@ -37,3 +37,23 @@ export type DeletePostState = {
 export type LikePostState = {
   message?: string;
 };
+
+const replyContent = z
+  .string({ error: "Informe a resposta." })
+  .trim()
+  .min(1, { error: "Informe a resposta." });
+
+export const replySchema = z.object({
+  content: replyContent,
+});
+
+export type ReplyFormState = {
+  revision: number;
+  content: string;
+  error?: string;
+  message?: string;
+};
+
+export type DeleteReplyState = {
+  message?: string;
+};

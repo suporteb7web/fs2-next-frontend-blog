@@ -3,14 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ZodError } from "zod";
-import { ApiError, createPost, deletePost, likePost, unlikePost, updatePost } from "@/lib/api";
+import {
+  ApiError,
+  createPost,
+  createReply,
+  deletePost,
+  deleteReply,
+  likePost,
+  unlikePost,
+  updatePost,
+} from "@/lib/api";
 import { parsePostId } from "@/lib/format";
 import {
   postSchema,
+  replySchema,
   type DeletePostState,
+  type DeleteReplyState,
   type LikePostState,
   type PostField,
   type PostFormState,
+  type ReplyFormState,
 } from "@/lib/post-schema";
 
 export async function createPostAction(
@@ -125,6 +137,77 @@ export async function toggleLikeAction(
   return {};
 }
 
+export async function createReplyAction(
+  state: ReplyFormState,
+  formData: FormData,
+): Promise<ReplyFormState> {
+  const revision = state.revision + 1;
+  const content = textField(formData, "content");
+  const id = parsePostId(textField(formData, "postId"));
+
+  if (id === null) {
+    return { revision, content, message: missingPost };
+  }
+
+  const parsed = replySchema.safeParse({ content });
+  if (!parsed.success) {
+    return {
+      revision,
+      content,
+      error: parsed.error.issues[0]?.message ?? replyInvalid,
+    };
+  }
+
+  const next = `/posts/${id}`;
+
+  try {
+    await createReply(id, parsed.data);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      redirect(`/login?next=${encodeURIComponent(next)}`);
+    }
+    if (error instanceof ApiError && error.status === 404) {
+      return { revision, content, message: missingPost };
+    }
+    if (error instanceof ApiError && error.status === 400) {
+      return replyValidationFailure(revision, content, error);
+    }
+    return { revision, content, message: replyFallback };
+  }
+
+  revalidatePath(next);
+  return { revision, content: "" };
+}
+
+export async function deleteReplyAction(
+  _state: DeleteReplyState,
+  formData: FormData,
+): Promise<DeleteReplyState> {
+  const id = parsePostId(textField(formData, "postId"));
+  const replyId = parsePostId(textField(formData, "replyId"));
+
+  if (id === null) return { message: missingPost };
+  if (replyId === null) return { message: missingReply };
+
+  try {
+    await deleteReply(id, replyId);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      redirect(`/login?next=${encodeURIComponent(`/posts/${id}`)}`);
+    }
+    if (error instanceof ApiError && error.status === 403) {
+      return { message: "Você só pode apagar as suas respostas." };
+    }
+    if (error instanceof ApiError && (error.status === 404 || error.status === 400)) {
+      return { message: missingReply };
+    }
+    return { message: replyDeleteFallback };
+  }
+
+  revalidatePath(`/posts/${id}`);
+  return {};
+}
+
 function refreshPostViews(id: number) {
   revalidatePath("/");
   revalidatePath(`/posts/${id}`);
@@ -189,6 +272,21 @@ function postFailure(
   return { message: fallback };
 }
 
+function replyValidationFailure(
+  revision: number,
+  content: string,
+  error: ApiError,
+): ReplyFormState {
+  const paths = error.details?.map((detail) => detail.path.split(".").at(-1)) ?? [];
+  if (paths.includes("id") && !paths.includes("content")) {
+    return { revision, content, message: missingPost };
+  }
+  if (error.code === "VALIDATION_ERROR") {
+    return { revision, content, error: replyInvalid };
+  }
+  return { revision, content, message: missingPost };
+}
+
 function isPostId(id: number): boolean {
   return Number.isSafeInteger(id) && id > 0;
 }
@@ -196,7 +294,11 @@ function isPostId(id: number): boolean {
 const createFallback = "Não foi possível publicar o post. Tente de novo.";
 const updateFallback = "Não foi possível salvar o post. Tente de novo.";
 const likeFallback = "Não foi possível atualizar a curtida. Tente de novo.";
+const replyFallback = "Não foi possível publicar a resposta. Tente de novo.";
+const replyDeleteFallback = "Não foi possível apagar a resposta. Tente de novo.";
+const replyInvalid = "Resposta inválida.";
 const missingPost = "Este post não existe mais.";
+const missingReply = "Essa resposta não existe mais.";
 
 const fieldFallback: Record<PostField, string> = {
   title: "Título inválido.",

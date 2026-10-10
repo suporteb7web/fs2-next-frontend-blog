@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeletePostButton } from "@/components/delete-post-button";
+import { DeleteReplyButton } from "@/components/delete-reply-button";
 import { LikeButton } from "@/components/like-button";
-import { ApiError, getMe, getPost, hasSession, mediaUrl, type Reply } from "@/lib/api";
+import { ReplyForm } from "@/components/reply-form";
+import { ApiError, getMe, getPost, hasSession, mediaUrl, type Reply, type User } from "@/lib/api";
 import { formatDate, likesLabel, parsePostId } from "@/lib/format";
 
 export async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -31,7 +33,8 @@ export async function PostDetail({ params }: { params: Promise<{ id: string }> }
 
   const image = mediaUrl(post.image);
   const loggedIn = await hasSession();
-  const isOwner = await isPostOwner(post.author.id, loggedIn);
+  const me = loggedIn ? await currentUser() : null;
+  const isOwner = me !== null && me.id === post.author.id;
 
   return (
     <article className="flex flex-col gap-8">
@@ -63,29 +66,40 @@ export async function PostDetail({ params }: { params: Promise<{ id: string }> }
           ) : (
             <ul className="list">
               {post.replies.map((reply) => (
-                <ReplyItem key={reply.id} reply={reply} />
+                <ReplyItem
+                  key={reply.id}
+                  postId={post.id}
+                  reply={reply}
+                  canDelete={me !== null && reply.author.id === me.id}
+                />
               ))}
             </ul>
           )}
+          <ReplyForm postId={post.id} disabled={!loggedIn} />
         </section>
       </div>
     </article>
   );
 }
 
-async function isPostOwner(authorId: number, loggedIn: boolean): Promise<boolean> {
-  if (!loggedIn) return false;
-
+async function currentUser(): Promise<User | null> {
   try {
-    const me = await getMe();
-    return me.id === authorId;
+    return await getMe();
   } catch (error) {
-    if (error instanceof ApiError) return false;
+    if (error instanceof ApiError) return null;
     throw error;
   }
 }
 
-function ReplyItem({ reply }: { reply: Reply }) {
+function ReplyItem({
+  postId,
+  reply,
+  canDelete,
+}: {
+  postId: number;
+  reply: Reply;
+  canDelete: boolean;
+}) {
   return (
     <li className="list-row">
       <div className="list-col-grow">
@@ -94,6 +108,7 @@ function ReplyItem({ reply }: { reply: Reply }) {
         </p>
         <p className="whitespace-pre-wrap">{reply.content}</p>
       </div>
+      {canDelete ? <DeleteReplyButton postId={postId} replyId={reply.id} /> : null}
     </li>
   );
 }
