@@ -229,6 +229,10 @@ async function readToken(): Promise<string | undefined> {
   return token || undefined;
 }
 
+export async function hasSession(): Promise<boolean> {
+  return (await readToken()) !== undefined;
+}
+
 async function request<T>(config: RequestConfig): Promise<T> {
   await io();
 
