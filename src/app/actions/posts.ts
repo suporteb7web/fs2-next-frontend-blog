@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ZodError } from "zod";
-import { ApiError, createPost, deletePost, updatePost } from "@/lib/api";
+import { ApiError, createPost, deletePost, likePost, unlikePost, updatePost } from "@/lib/api";
 import { parsePostId } from "@/lib/format";
 import {
   postSchema,
   type DeletePostState,
+  type LikePostState,
   type PostField,
   type PostFormState,
 } from "@/lib/post-schema";
@@ -89,6 +90,41 @@ export async function deletePostAction(
   redirect("/");
 }
 
+export async function toggleLikeAction(
+  _state: LikePostState,
+  formData: FormData,
+): Promise<LikePostState> {
+  const id = parsePostId(textField(formData, "id"));
+  if (id === null) return { message: missingPost };
+
+  const intent = formData.get("intent");
+  if (intent !== "like" && intent !== "unlike") {
+    return { message: likeFallback };
+  }
+
+  const next = `/posts/${id}`;
+
+  try {
+    if (intent === "like") {
+      await likePost(id);
+    } else {
+      await unlikePost(id);
+    }
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      redirect(`/login?next=${encodeURIComponent(next)}`);
+    }
+    if (error instanceof ApiError && (error.status === 404 || error.status === 400)) {
+      return { message: missingPost };
+    }
+    return { message: likeFallback };
+  }
+
+  revalidatePath("/");
+  revalidatePath(next);
+  return {};
+}
+
 function refreshPostViews(id: number) {
   revalidatePath("/");
   revalidatePath(`/posts/${id}`);
@@ -159,6 +195,7 @@ function isPostId(id: number): boolean {
 
 const createFallback = "Não foi possível publicar o post. Tente de novo.";
 const updateFallback = "Não foi possível salvar o post. Tente de novo.";
+const likeFallback = "Não foi possível atualizar a curtida. Tente de novo.";
 const missingPost = "Este post não existe mais.";
 
 const fieldFallback: Record<PostField, string> = {

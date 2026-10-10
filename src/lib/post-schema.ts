@@ -33,3 +33,7 @@ export type PostFormState = {
 export type DeletePostState = {
   message?: string;
 };
+
+export type LikePostState = {
+  message?: string;
+};

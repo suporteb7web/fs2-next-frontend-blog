@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeletePostButton } from "@/components/delete-post-button";
+import { LikeButton } from "@/components/like-button";
 import { ApiError, getMe, getPost, hasSession, mediaUrl, type Reply } from "@/lib/api";
 import { formatDate, likesLabel, parsePostId } from "@/lib/format";
 
@@ -29,7 +30,8 @@ export async function PostDetail({ params }: { params: Promise<{ id: string }> }
   }
 
   const image = mediaUrl(post.image);
-  const isOwner = await isPostOwner(post.author.id);
+  const loggedIn = await hasSession();
+  const isOwner = await isPostOwner(post.author.id, loggedIn);
 
   return (
     <article className="flex flex-col gap-8">
@@ -51,24 +53,28 @@ export async function PostDetail({ params }: { params: Promise<{ id: string }> }
       </header>
       {image ? <img src={image} alt="" className="w-full rounded-box" /> : null}
       <div className="whitespace-pre-wrap">{post.content}</div>
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Respostas</h2>
-        {post.replies.length === 0 ? (
-          <p className="text-base-content/70">Nenhuma resposta ainda.</p>
-        ) : (
-          <ul className="list">
-            {post.replies.map((reply) => (
-              <ReplyItem key={reply.id} reply={reply} />
-            ))}
-          </ul>
-        )}
-      </section>
+      <div className="border border-t opacity-10"></div>
+      <div className="flex flex-col gap-6">
+        {loggedIn ? <LikeButton id={post.id} liked={post.likedByMe} /> : null}
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold">Respostas</h2>
+          {post.replies.length === 0 ? (
+            <p className="text-base-content/70">Nenhuma resposta ainda.</p>
+          ) : (
+            <ul className="list">
+              {post.replies.map((reply) => (
+                <ReplyItem key={reply.id} reply={reply} />
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </article>
   );
 }
 
-async function isPostOwner(authorId: number): Promise<boolean> {
-  if (!(await hasSession())) return false;
+async function isPostOwner(authorId: number, loggedIn: boolean): Promise<boolean> {
+  if (!loggedIn) return false;
 
   try {
     const me = await getMe();
@@ -102,6 +108,8 @@ export function PostDetailSkeleton() {
         <div className="skeleton skeleton-text h-4 w-full" />
         <div className="skeleton skeleton-text h-4 w-3/4" />
       </div>
+      <div className="divider" />
+      <div className="skeleton h-6 w-28" />
     </div>
   );
 }
