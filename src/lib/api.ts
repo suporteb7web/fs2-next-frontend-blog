@@ -2,7 +2,7 @@ import "server-only";
 
 import axios, { isAxiosError } from "axios";
 import { io } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { AUTH_COOKIE_NAME } from "@/lib/auth";
 
 export { AUTH_COOKIE_NAME };
@@ -231,9 +231,44 @@ function toApiError(error: unknown): ApiError {
 }
 
 async function readToken(): Promise<string | undefined> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-  return token || undefined;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+    return token || undefined;
+  } catch (error) {
+    // Next.js 16 dev throws this while re-rendering a Server Action response.
+    if (!isCookiesInvariant(error)) throw error;
+    const headerStore = await headers();
+    return tokenFromCookieHeader(headerStore.get("cookie"));
+  }
+}
+
+function isCookiesInvariant(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.name === "InvariantError" &&
+    error.message.includes("mutableCookies")
+  );
+}
+
+function tokenFromCookieHeader(cookieHeader: string | null): string | undefined {
+  if (!cookieHeader) return undefined;
+
+  for (const part of cookieHeader.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator === -1) continue;
+    const name = part.slice(0, separator).trim();
+    if (name !== AUTH_COOKIE_NAME) continue;
+    const value = part.slice(separator + 1).trim();
+    if (!value) return undefined;
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return undefined;
 }
 
 export async function hasSession(): Promise<boolean> {

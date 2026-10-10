@@ -2,13 +2,18 @@
 export const AUTH_COOKIE_NAME = "token";
 
 const GUEST_PATHS = new Set(["/login", "/cadastro"]);
+const EDIT_POST_PATH = /^\/posts\/[^/]+\/editar$/;
 
 export function isGuestPath(pathname: string): boolean {
   return GUEST_PATHS.has(pathname);
 }
 
 export function isProtectedPath(pathname: string): boolean {
-  return pathname === "/posts/novo" || pathname.startsWith("/posts/novo/");
+  return (
+    pathname === "/posts/novo" ||
+    pathname.startsWith("/posts/novo/") ||
+    EDIT_POST_PATH.test(pathname)
+  );
 }
 
 /** Caminho interno para o redirect pós-login. Descarta URLs externas e as próprias telas de auth. */

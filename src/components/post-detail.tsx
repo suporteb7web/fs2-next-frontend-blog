@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ApiError, getPost, mediaUrl, type Reply } from "@/lib/api";
+import { DeletePostButton } from "@/components/delete-post-button";
+import { ApiError, getMe, getPost, hasSession, mediaUrl, type Reply } from "@/lib/api";
 import { formatDate, likesLabel, parsePostId } from "@/lib/format";
 
 export async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -27,11 +29,22 @@ export async function PostDetail({ params }: { params: Promise<{ id: string }> }
   }
 
   const image = mediaUrl(post.image);
+  const isOwner = await isPostOwner(post.author.id);
 
   return (
     <article className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold">{post.title}</h1>
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <h1 className="text-3xl font-semibold">{post.title}</h1>
+          {isOwner ? (
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Link href={`/posts/${post.id}/editar`} className="btn">
+                Editar
+              </Link>
+              <DeletePostButton id={post.id} />
+            </div>
+          ) : null}
+        </div>
         <p className="text-sm text-base-content/70">
           {post.author.name} · {formatDate(post.createdAt)} · {likesLabel(post.likesCount)}
         </p>
@@ -52,6 +65,18 @@ export async function PostDetail({ params }: { params: Promise<{ id: string }> }
       </section>
     </article>
   );
+}
+
+async function isPostOwner(authorId: number): Promise<boolean> {
+  if (!(await hasSession())) return false;
+
+  try {
+    const me = await getMe();
+    return me.id === authorId;
+  } catch (error) {
+    if (error instanceof ApiError) return false;
+    throw error;
+  }
 }
 
 function ReplyItem({ reply }: { reply: Reply }) {
