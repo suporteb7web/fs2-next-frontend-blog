@@ -168,6 +168,13 @@ function backendUrl(): string {
   return url.replace(/\/$/, "");
 }
 
+/** URL absoluta de um arquivo público (`/uploads/...`). */
+export function mediaUrl(path: string | null): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${backendUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 function isErrorCode(value: unknown): value is ErrorCode {
   return (
     typeof value === "string" && ERROR_CODES.some((code) => code === value)
