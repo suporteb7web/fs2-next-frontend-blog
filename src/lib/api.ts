@@ -3,9 +3,9 @@ import "server-only";
 import axios, { isAxiosError } from "axios";
 import { io } from "next/cache";
 import { cookies } from "next/headers";
+import { AUTH_COOKIE_NAME } from "@/lib/auth";
 
-/** Cookie httpOnly com o token de sessão (hex) devolvido no cadastro e no login. */
-export const AUTH_COOKIE_NAME = "token";
+export { AUTH_COOKIE_NAME };
 
 const http = axios.create({
   headers: { Accept: "application/json" },
