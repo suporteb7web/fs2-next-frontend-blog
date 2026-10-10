@@ -30,6 +30,27 @@ export type PostFormState = {
   message?: string;
 };
 
+const imageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
+const maxImageBytes = 5 * 1024 * 1024;
+
+export const postImageSchema = z
+  .instanceof(File, { error: "Selecione uma imagem." })
+  .refine((file) => file.size > 0, { error: "Selecione uma imagem." })
+  .refine((file) => imageTypes.some((type) => type === file.type), {
+    error: "Use uma imagem JPEG, PNG ou WebP.",
+  })
+  .refine((file) => file.size <= maxImageBytes, {
+    error: "A imagem pode ter no máximo 5 MB.",
+  });
+
+export type PostImageFormState = {
+  revision: number;
+  error?: string;
+  message?: string;
+  saved?: boolean;
+  image?: string | null;
+};
+
 export type DeletePostState = {
   message?: string;
 };

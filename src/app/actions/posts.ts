@@ -10,11 +10,14 @@ import {
   deletePost,
   deleteReply,
   likePost,
+  mediaUrl,
   unlikePost,
   updatePost,
+  updatePostImage,
 } from "@/lib/api";
 import { parsePostId } from "@/lib/format";
 import {
+  postImageSchema,
   postSchema,
   replySchema,
   type DeletePostState,
@@ -22,6 +25,7 @@ import {
   type LikePostState,
   type PostField,
   type PostFormState,
+  type PostImageFormState,
   type ReplyFormState,
 } from "@/lib/post-schema";
 
@@ -74,6 +78,34 @@ export async function updatePostAction(
 
   refreshPostViews(id);
   redirect(`/posts/${id}`);
+}
+
+export async function updatePostImageAction(
+  id: number,
+  state: PostImageFormState,
+  formData: FormData,
+): Promise<PostImageFormState> {
+  const revision = state.revision + 1;
+  const next = `/posts/${id}/editar`;
+
+  if (!isPostId(id)) {
+    return { revision, message: missingPost };
+  }
+
+  const parsed = postImageSchema.safeParse(formData.get("image"));
+  if (!parsed.success) {
+    return { revision, error: parsed.error.issues[0]?.message ?? imageInvalid };
+  }
+
+  let post;
+  try {
+    post = await updatePostImage(id, parsed.data);
+  } catch (error) {
+    return { revision, ...imageFailure(error, next) };
+  }
+
+  refreshPostViews(id);
+  return { revision, saved: true, image: mediaUrl(post.image) };
 }
 
 export async function deletePostAction(
@@ -272,6 +304,37 @@ function postFailure(
   return { message: fallback };
 }
 
+function imageFailure(
+  error: unknown,
+  loginNext: string,
+): Pick<PostImageFormState, "message" | "error"> {
+  if (!(error instanceof ApiError)) return { message: imageFallback };
+
+  if (error.status === 401) {
+    redirect(`/login?next=${encodeURIComponent(loginNext)}`);
+  }
+
+  if (error.status === 403) {
+    return { message: "Você não pode editar este post." };
+  }
+
+  if (error.status === 404) {
+    return { message: missingPost };
+  }
+
+  if (error.code === "VALIDATION_ERROR" && error.details) {
+    for (const detail of error.details) {
+      const field = detail.path.split(".").at(-1);
+      if (field === "id") return { message: missingPost };
+      if (field === "image") {
+        return { error: imageApiMessages[detail.message] ?? imageInvalid };
+      }
+    }
+  }
+
+  return { message: imageFallback };
+}
+
 function replyValidationFailure(
   revision: number,
   content: string,
@@ -293,6 +356,15 @@ function isPostId(id: number): boolean {
 
 const createFallback = "Não foi possível publicar o post. Tente de novo.";
 const updateFallback = "Não foi possível salvar o post. Tente de novo.";
+const imageFallback = "Não foi possível enviar a imagem. Tente de novo.";
+const imageInvalid = "A imagem não pôde ser lida.";
+
+const imageApiMessages: Record<string, string> = {
+  "Image file is required": "Selecione uma imagem.",
+  "File type must be jpeg, png or webp": "Use uma imagem JPEG, PNG ou WebP.",
+  "Invalid image": imageInvalid,
+  "File too large": "A imagem pode ter no máximo 5 MB.",
+};
 const likeFallback = "Não foi possível atualizar a curtida. Tente de novo.";
 const replyFallback = "Não foi possível publicar a resposta. Tente de novo.";
 const replyDeleteFallback = "Não foi possível apagar a resposta. Tente de novo.";

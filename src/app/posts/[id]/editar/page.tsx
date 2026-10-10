@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updatePostAction } from "@/app/actions/posts";
 import { PostForm } from "@/components/post-form";
-import { ApiError, getMe, getPost, type PostDetail, type User } from "@/lib/api";
+import { PostImageForm } from "@/components/post-image-form";
+import { ApiError, getMe, getPost, mediaUrl, type PostDetail, type User } from "@/lib/api";
 import { parsePostId } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -31,6 +32,7 @@ export default async function EditPostPage({ params }: PageProps<"/posts/[id]/ed
         pendingLabel="Salvando…"
         initialValues={{ title: post.title, content: post.content }}
       />
+      <PostImageForm postId={post.id} image={mediaUrl(post.image)} />
     </div>
   );
 }
