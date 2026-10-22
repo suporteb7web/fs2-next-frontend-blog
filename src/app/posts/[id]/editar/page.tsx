@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { updatePostAction } from "@/app/actions/posts";
 import { PostForm } from "@/components/post-form";
 import { PostImageForm } from "@/components/post-image-form";
-import { ApiError, getMe, getPost, mediaUrl, type PostDetail, type User } from "@/lib/api";
+import { ApiError, getMe, getPost, mediaUrl, type Me, type PostDetail } from "@/lib/api";
 import { parsePostId } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -25,21 +25,23 @@ export default async function EditPostPage({ params }: PageProps<"/posts/[id]/ed
         Voltar
       </Link>
       <PostForm
-        key={`${post.title}\n${post.content}`}
+        key={`${post.title}\n${post.content}\n${post.premium}`}
         heading="Editar post"
         action={updatePostAction.bind(null, post.id)}
         submitLabel="Salvar"
         pendingLabel="Salvando…"
-        initialValues={{ title: post.title, content: post.content }}
+        canMarkPremium={post.viewerPremium}
+        sendPremiumValue
+        initialValues={{ title: post.title, content: post.content, premium: post.premium }}
       />
       <PostImageForm postId={post.id} image={mediaUrl(post.image)} />
     </div>
   );
 }
 
-async function loadOwnPost(id: number): Promise<PostDetail | null> {
+async function loadOwnPost(id: number): Promise<(PostDetail & { viewerPremium: boolean }) | null> {
   const loginPath = `/login?next=${encodeURIComponent(`/posts/${id}/editar`)}`;
-  let me: User;
+  let me: Me;
   let post: PostDetail;
 
   try {
@@ -55,7 +57,7 @@ async function loadOwnPost(id: number): Promise<PostDetail | null> {
   }
 
   if (me.id !== post.author.id) return null;
-  return post;
+  return { ...post, viewerPremium: me.premium };
 }
 
 function EditUnavailable() {

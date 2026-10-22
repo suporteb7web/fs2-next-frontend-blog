@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { logout } from "@/app/actions/auth";
-import { hasSession } from "@/lib/api";
+import { ApiError, getMe, hasSession, type Me } from "@/lib/api";
 
 export function Header() {
   return (
@@ -23,11 +23,12 @@ export function Header() {
 }
 
 async function HeaderActions() {
-  const loggedIn = await hasSession();
+  const me = await loadMe();
 
-  if (loggedIn) {
+  if (me) {
     return (
       <>
+        <PremiumAccess premium={me.premium} />
         <Link href="/posts/novo" className="btn">
           Criar post
         </Link>
@@ -42,6 +43,9 @@ async function HeaderActions() {
 
   return (
     <>
+      <Link href="/premium" className="btn">
+        Premium
+      </Link>
       <Link href="/login" className="btn">
         Login
       </Link>
@@ -52,9 +56,31 @@ async function HeaderActions() {
   );
 }
 
+function PremiumAccess({ premium }: { premium: boolean }) {
+  if (premium) return <span className="badge">Premium</span>;
+
+  return (
+    <Link href="/premium" className="btn">
+      Premium
+    </Link>
+  );
+}
+
+async function loadMe(): Promise<Me | null> {
+  if (!(await hasSession())) return null;
+
+  try {
+    return await getMe();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
 function HeaderActionsFallback() {
   return (
     <>
+      <div className="skeleton h-10 w-24" />
       <div className="skeleton h-10 w-24" />
       <div className="skeleton h-10 w-24" />
     </>

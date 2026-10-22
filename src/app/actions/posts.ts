@@ -43,7 +43,7 @@ export async function createPostAction(
 
   let post;
   try {
-    post = await createPost(parsed.data);
+    post = await createPost(createBody(parsed.data, formData));
   } catch (error) {
     return { revision, values, ...postFailure(error, "/posts/novo", createFallback) };
   }
@@ -71,7 +71,7 @@ export async function updatePostAction(
   }
 
   try {
-    await updatePost(id, parsed.data);
+    await updatePost(id, updateBody(parsed.data, formData));
   } catch (error) {
     return { revision, values, ...postFailure(error, next, updateFallback) };
   }
@@ -250,7 +250,24 @@ function readValues(formData: FormData): PostFormState["values"] {
   return {
     title: textField(formData, "title"),
     content: textField(formData, "content"),
+    premium: formData.get("premium") === "true",
   };
+}
+
+function createBody(
+  values: { title: string; content: string },
+  formData: FormData,
+): { title: string; content: string; premium?: boolean } {
+  if (formData.get("premium") !== "true") return values;
+  return { ...values, premium: true };
+}
+
+function updateBody(
+  values: { title: string; content: string },
+  formData: FormData,
+): { title: string; content: string; premium?: boolean } {
+  if (formData.get("includePremium") !== "1") return values;
+  return { ...values, premium: formData.get("premium") === "true" };
 }
 
 function textField(formData: FormData, name: string): string {
@@ -283,6 +300,9 @@ function postFailure(
   }
 
   if (error.status === 403) {
+    if (error.message === "Only premium users can mark posts as premium") {
+      return { message: "Só uma conta premium pode marcar um post como premium." };
+    }
     return { message: "Você não pode editar este post." };
   }
 

@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import type { PostFormState, PostFormValues } from "@/lib/post-schema";
 
-const emptyValues: PostFormValues = { title: "", content: "" };
+const emptyValues: PostFormValues = { title: "", content: "", premium: false };
 
 export function PostForm({
   heading,
@@ -11,12 +11,16 @@ export function PostForm({
   submitLabel,
   pendingLabel,
   initialValues = emptyValues,
+  canMarkPremium = false,
+  sendPremiumValue = false,
 }: {
   heading: string;
   action: (state: PostFormState, formData: FormData) => Promise<PostFormState>;
   submitLabel: string;
   pendingLabel: string;
   initialValues?: PostFormValues;
+  canMarkPremium?: boolean;
+  sendPremiumValue?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, {
     revision: 0,
@@ -49,12 +53,48 @@ export function PostForm({
           error={state.errors?.content}
           multiline
         />
+        {canMarkPremium ? (
+          <PremiumField
+            revision={state.revision}
+            defaultChecked={state.values.premium}
+            sendPremiumValue={sendPremiumValue}
+          />
+        ) : null}
         <button type="submit" className="btn mt-2 w-fit" disabled={pending} aria-busy={pending}>
           {pending ? <span className="loading loading-spinner" /> : null}
           {pending ? pendingLabel : submitLabel}
         </button>
       </form>
     </div>
+  );
+}
+
+function PremiumField({
+  revision,
+  defaultChecked,
+  sendPremiumValue,
+}: {
+  revision: number;
+  defaultChecked: boolean;
+  sendPremiumValue: boolean;
+}) {
+  return (
+    <fieldset className="fieldset">
+      <legend className="fieldset-legend">Visibilidade</legend>
+      {sendPremiumValue ? <input type="hidden" name="includePremium" value="1" /> : null}
+      <label className="flex w-fit items-center gap-2">
+        <input
+          key={`premium-${revision}`}
+          type="checkbox"
+          name="premium"
+          value="true"
+          defaultChecked={defaultChecked}
+          className="checkbox"
+        />
+        Post premium
+      </label>
+      <p className="label">Quem não é premium não vê este post.</p>
+    </fieldset>
   );
 }
 

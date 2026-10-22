@@ -4,7 +4,7 @@ import { DeletePostButton } from "@/components/delete-post-button";
 import { DeleteReplyButton } from "@/components/delete-reply-button";
 import { LikeButton } from "@/components/like-button";
 import { ReplyForm } from "@/components/reply-form";
-import { ApiError, getMe, getPost, hasSession, mediaUrl, type Reply, type User } from "@/lib/api";
+import { ApiError, getMe, getPost, hasSession, mediaUrl, type Me, type Reply } from "@/lib/api";
 import { formatDate, likesLabel, parsePostId } from "@/lib/format";
 
 export async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -40,7 +40,10 @@ export async function PostDetail({ params }: { params: Promise<{ id: string }> }
     <article className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <h1 className="text-3xl font-semibold">{post.title}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-3xl font-semibold">{post.title}</h1>
+            {post.premium ? <span className="badge">Premium</span> : null}
+          </div>
           {isOwner ? (
             <div className="flex shrink-0 flex-wrap gap-2">
               <Link href={`/posts/${post.id}/editar`} className="btn">
@@ -82,7 +85,7 @@ export async function PostDetail({ params }: { params: Promise<{ id: string }> }
   );
 }
 
-async function currentUser(): Promise<User | null> {
+async function currentUser(): Promise<Me | null> {
   try {
     return await getMe();
   } catch (error) {

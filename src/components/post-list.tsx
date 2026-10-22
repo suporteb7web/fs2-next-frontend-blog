@@ -26,7 +26,7 @@ export async function PostList({
     if (error instanceof ApiError) {
       return (
         <div role="alert" className="alert alert-error">
-          {error.status === 400 ? "Página inválida." : "Não foi possível carregar os posts."}
+          {listErrorMessage(error.status)}
         </div>
       );
     }
@@ -78,6 +78,7 @@ function PostCard({ post }: { post: PostListItem }) {
           <Link href={`/posts/${post.id}`} className="link link-hover">
             {post.title}
           </Link>
+          {post.premium ? <span className="badge">Premium</span> : null}
         </h2>
         <p className="line-clamp-3">{post.content}</p>
         <p className="text-sm text-base-content/70">
@@ -86,6 +87,12 @@ function PostCard({ post }: { post: PostListItem }) {
       </div>
     </article>
   );
+}
+
+function listErrorMessage(status: number): string {
+  if (status === 400) return "Página inválida.";
+  if (status === 401) return "Não foi possível abrir os posts com a sessão atual.";
+  return "Não foi possível carregar os posts.";
 }
 
 export function PostListSkeleton() {

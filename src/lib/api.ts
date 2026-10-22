@@ -44,11 +44,13 @@ export type LoginRequest = {
 export type CreatePostRequest = {
   title: string;
   content: string;
+  premium?: boolean;
 };
 
 export type UpdatePostRequest = {
   title?: string;
   content?: string;
+  premium?: boolean;
 };
 
 export type CreateReplyRequest = {
@@ -67,6 +69,14 @@ export type User = {
   avatar: string | null;
 };
 
+export type Me = User & {
+  premium: boolean;
+};
+
+export type CheckoutSession = {
+  url: string;
+};
+
 export type AuthResponse = {
   token: string;
   user: User;
@@ -77,6 +87,7 @@ export type Post = {
   title: string;
   content: string;
   image: string | null;
+  premium: boolean;
   createdAt: string;
   author: Author;
 };
@@ -86,6 +97,7 @@ export type PostListItem = {
   title: string;
   content: string;
   image: string | null;
+  premium: boolean;
   createdAt: string;
   likesCount: number;
   author: Author;
@@ -103,6 +115,7 @@ export type PostDetail = {
   title: string;
   content: string;
   image: string | null;
+  premium: boolean;
   createdAt: string;
   likesCount: number;
   likedByMe: boolean;
@@ -334,8 +347,16 @@ export function login(input: LoginRequest): Promise<AuthResponse> {
   });
 }
 
-export function getMe(): Promise<User> {
-  return request<User>({ method: "GET", path: "/api/me", auth: "required" });
+export function getMe(): Promise<Me> {
+  return request<Me>({ method: "GET", path: "/api/me", auth: "required" });
+}
+
+export function createCheckout(): Promise<CheckoutSession> {
+  return request<CheckoutSession>({
+    method: "POST",
+    path: "/api/me/checkout",
+    auth: "required",
+  });
 }
 
 export function updateAvatar(image: File): Promise<User> {
@@ -352,6 +373,7 @@ export function listPosts(page?: number): Promise<PostListResponse> {
     method: "GET",
     path: "/api/posts",
     params: page === undefined ? undefined : { page },
+    auth: "optional",
   });
 }
 

@@ -21,6 +21,7 @@ export type PostField = "title" | "content";
 export type PostFormValues = {
   title: string;
   content: string;
+  premium: boolean;
 };
 
 export type PostFormState = {
