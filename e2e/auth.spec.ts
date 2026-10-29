@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { AUTH_COOKIE_NAME } from "../src/lib/auth";
+import { appAlert, field } from "./locators";
 import { seedUsers } from "./mocks/data";
 
 const existingUser = seedUsers.find((user) => user.email === "ada@example.com");
@@ -17,9 +18,9 @@ test("cadastra, sai e entra de novo autenticado", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Criar conta" })).toBeVisible();
   await expectLoggedOut(page);
 
-  await page.getByLabel("Nome").fill("Autora E2E");
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  await field(page, "Nome").fill("Autora E2E");
+  await field(page, "E-mail").fill(email);
+  await field(page, "Senha").fill(password);
   await page.getByRole("button", { name: "Cadastrar" }).click();
 
   await expect(page).toHaveURL("/");
@@ -42,8 +43,8 @@ test("cadastra, sai e entra de novo autenticado", async ({ page }) => {
     return url.pathname === "/login" && url.searchParams.get("next") === "/posts/novo";
   });
 
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  await field(page, "E-mail").fill(email);
+  await field(page, "Senha").fill(password);
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await expect(page).toHaveURL("/posts/novo");
@@ -58,8 +59,8 @@ test("entra com uma conta que já existe e fica logado", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
   await expectLoggedOut(page);
 
-  await page.getByLabel("E-mail").fill(existingUser.email);
-  await page.getByLabel("Senha").fill(existingUser.password);
+  await field(page, "E-mail").fill(existingUser.email);
+  await field(page, "Senha").fill(existingUser.password);
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await expect(page).toHaveURL("/");
@@ -73,20 +74,20 @@ test("entra com uma conta que já existe e fica logado", async ({ page }) => {
 
 test("não autentica com senha incorreta", async ({ page }) => {
   await page.goto("/login");
-  await page.getByLabel("E-mail").fill(existingUser.email);
-  await page.getByLabel("Senha").fill("errada1");
+  await field(page, "E-mail").fill(existingUser.email);
+  await field(page, "Senha").fill("errada1");
   await page.getByRole("button", { name: "Entrar" }).click();
 
-  await expect(page.getByRole("alert")).toHaveText("E-mail ou senha inválidos.");
+  await expect(appAlert(page)).toHaveText("E-mail ou senha inválidos.");
   await expect(page).toHaveURL("/login");
   await expectLoggedOut(page);
 });
 
 test("não autentica com e-mail já cadastrado", async ({ page }) => {
   await page.goto("/cadastro");
-  await page.getByLabel("Nome").fill("Outra Ada");
-  await page.getByLabel("E-mail").fill(existingUser.email);
-  await page.getByLabel("Senha").fill(existingUser.password);
+  await field(page, "Nome").fill("Outra Ada");
+  await field(page, "E-mail").fill(existingUser.email);
+  await field(page, "Senha").fill(existingUser.password);
   await page.getByRole("button", { name: "Cadastrar" }).click();
 
   await expect(page.getByText("Este e-mail já está cadastrado.")).toBeVisible();

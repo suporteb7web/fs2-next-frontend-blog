@@ -19,6 +19,6 @@ export function listen(): void {
     server: setupServer(...handlers),
   });
   if (runtime.listening) return;
-  runtime.server.listen({ onUnhandledRequest: "bypass" });
+  runtime.server.listen({ onUnhandledFrame: "bypass" });
   runtime.listening = true;
 }

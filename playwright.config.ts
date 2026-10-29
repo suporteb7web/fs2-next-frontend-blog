@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// 3000 is often already taken locally; this suite always boots its own dev server.
+// 3000 is often already taken locally; this suite always boots its own server.
 const port = 3100;
 const baseURL = `http://127.0.0.1:${port}`;
 
@@ -20,7 +20,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    // CI already ran `npm run build` and serves that build. Locally, boot the dev server.
+    command: process.env.CI ? "npm run start" : "npm run dev",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

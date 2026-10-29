@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { AUTH_COOKIE_NAME } from "../src/lib/auth";
+import { appAlert, field } from "./locators";
 import { mockCheckoutUrl, mockEmailPrefix } from "./mocks/data";
 
 const password = "secret1";
@@ -33,8 +34,8 @@ test("visitante entra e o checkout abre sem carregar o Stripe", async ({ page })
   });
   await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
 
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  await field(page, "E-mail").fill(email);
+  await field(page, "Senha").fill(password);
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await expectMemberOffer(page);
@@ -103,7 +104,7 @@ test("falha ao iniciar o pagamento e permanece na página", async ({ page }) => 
   await expectMemberOffer(page);
 
   await page.getByRole("button", { name: "Tornar-se premium" }).click();
-  await expect(page.getByRole("alert")).toHaveText("Não foi possível iniciar o pagamento. Tente de novo.");
+  await expect(appAlert(page)).toHaveText("Não foi possível iniciar o pagamento. Tente de novo.");
   await expect(page).toHaveURL("/premium");
   await expect(page.getByRole("button", { name: "Tornar-se premium" })).toBeEnabled();
   await expect(page.getByRole("banner").getByRole("link", { name: "Premium", exact: true })).toBeVisible();
@@ -117,7 +118,7 @@ test("não navega quando a URL de pagamento é inválida", async ({ page }) => {
   await page.goto("/premium");
   await page.getByRole("button", { name: "Tornar-se premium" }).click();
 
-  await expect(page.getByRole("alert")).toHaveText("Não foi possível iniciar o pagamento. Tente de novo.");
+  await expect(appAlert(page)).toHaveText("Não foi possível iniciar o pagamento. Tente de novo.");
   await expect(page).toHaveURL("/premium");
   await expect(page.getByRole("button", { name: "Tornar-se premium" })).toBeEnabled();
   expect(stripe).toEqual([]);
@@ -131,7 +132,7 @@ test("avisa quando a conta já é premium ao iniciar o pagamento", async ({ page
   await expectMemberOffer(page);
 
   await page.getByRole("button", { name: "Tornar-se premium" }).click();
-  await expect(page.getByRole("alert")).toHaveText("Sua conta já é premium.");
+  await expect(appAlert(page)).toHaveText("Sua conta já é premium.");
   await expect(page).toHaveURL("/premium");
   await expect(page.getByRole("button", { name: "Tornar-se premium" })).toBeEnabled();
   await expect(page.getByText("Sua conta já é premium. O acesso não expira.")).toHaveCount(0);
@@ -156,7 +157,7 @@ test("sessão inválida não oferece o pagamento", async ({ page }) => {
 
   await expect(page).toHaveURL("/premium");
   await expect(page.getByRole("heading", { name: "Premium" })).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveText(
+  await expect(appAlert(page)).toHaveText(
     "Não foi possível carregar a conta com a sessão atual.",
   );
   await expect(page.getByRole("button", { name: "Tornar-se premium" })).toHaveCount(0);
@@ -256,9 +257,9 @@ async function register(page: Page, name: string, email: string, next?: string) 
     await page.goto("/cadastro");
   }
 
-  await page.getByLabel("Nome").fill(name);
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  await field(page, "Nome").fill(name);
+  await field(page, "E-mail").fill(email);
+  await field(page, "Senha").fill(password);
   await page.getByRole("button", { name: "Cadastrar" }).click();
   await expect(page).toHaveURL(next ?? "/");
   await expect(page.getByRole("link", { name: "Criar post" })).toBeVisible();
