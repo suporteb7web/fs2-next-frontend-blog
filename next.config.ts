@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   /* config options here */
   // MSW patches Node's http. Bundling it would intercept a copy axios never uses.
   serverExternalPackages: ["msw"],
